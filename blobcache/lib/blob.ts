@@ -45,9 +45,21 @@ export async function downloadAndUploadImageToBlob(imageUrl: string | undefined,
             throw new Error(`Failed to fetch image from ${imageUrl}`);
         }
 
+        // Check that content-type is an image (no need if you're using third-party images where you can be sure - which was my case)
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.startsWith('image/')) {
+            throw new Error(`Invalid content type: ${contentType}`);
+        }
+
         // Convert the response to a Buffer
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        // Enforce a max size limit > this is kinda neat
+        const MAX_SIZE = 10 * 1024 * 1024; // This is 10MB
+        if (buffer.byteLength > MAX_SIZE) {
+            throw new Error(`Image size exceeds limit of ${MAX_SIZE / 1024 / 1024}MB`);
+        }
 
         // Upload the image buffer to Vercel Blob storage
         return await uploadImageToBlob(buffer, sku);  // The filename will be generated inside this function
